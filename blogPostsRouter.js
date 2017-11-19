@@ -1,4 +1,7 @@
+'use strict';
+
 const express = require('express');
+const morgan = require('morgan');
 const router = express.Router();
 
 const bodyParser = require('body-parser');
@@ -6,15 +9,19 @@ const jsonParser = bodyParser.json();
 
 const {BlogPosts} = require('./models');
 
+app.use (morgan('comment'));
+app.use (express.static('public'));
+const app = express();
+
 // convenience function for generating lorem text for blog
 // posts we initially add below
 function lorem() {
-  return 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod ' +
-    'tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, '
-    'quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo ' +
-    'consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse ' +
-    'cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non ' +
-    'proident, sunt in culpa qui officia deserunt mollit anim id est laborum.'
+  return 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod '+
+    'tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, '+
+    'quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo '+
+    'consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse '+
+    'cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non '+
+    'proident, sunt in culpa qui officia deserunt mollit anim id est laborum.';
 }
 
 // seed some posts so initial GET requests will return something
@@ -23,10 +30,25 @@ BlogPosts.create(
 BlogPosts.create(
   'Lions and tigers and bears oh my', lorem(), 'Lefty Lil');
 
-// add endpoint for GET. It should call `BlogPosts.get()`
-// and return JSON objects of stored blog posts.
-// send back JSON representation of all blog posts
-// on GET requests to root
+app.get('/blog-posts', (req, res) => {
+  res.json(BlogPosts.get());
+});
+
+app.post('/blog-posts', jsonParser, (req, res) => {
+  const requiredFields = ['title', 'content', 'author', 'publishDate'];
+  for (let i=0; i<requiredFields.length; i++) {
+    const field = requiredFields[i];
+    if(!(field in req.body)) {
+      const message = `Missing \`${field}\`in request body`;
+      console.error(message);
+      return res.status(400).send(message);
+    }
+  }
+
+  const item = BlogPosts.create(req.body.title, req.body.author, req.body.content, req.body.publishDate);
+  res.status(201).json(item);
+});
+
 
 
 // add endpoint for POST requests, which should cause a new
